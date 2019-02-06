@@ -10,6 +10,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 
@@ -17,10 +20,17 @@ import (
 )
 
 type config struct {
-	Label   string `json:"Label"`
-	Subject string `json:"Subject"`
-	Sender  string `json:"Sender"`
-	SaveLoc string `json:"SaveLoc"`
+	Label            string `json:"Label"`
+	Subject          string `json:"Subject"`
+	Sender           string `json:"Sender"`
+	SaveLoc          string `json:"SaveLoc"`
+	ShortDescription string `json:"ShortDescription"`
+	TimeZone         string `json:"TimeZone"`
+}
+
+type linkListObject struct {
+	Link string
+	Date string
 }
 
 func main() {
@@ -28,22 +38,30 @@ func main() {
 	query := fmt.Sprintf("from:%s subject:%s", config.Sender, config.Subject)
 	list := gmail.ListEmails(config.Label, query)
 
-	var linklist []string
+	var linklist []linkListObject
+
 	for _, msg := range list {
 		//https://www.thepolyglotdeveloper.com/2017/05/concurrent-golang-applications-goroutines-channels/
 		link, _ := getLink(gmail.GetEmailBody(gmail.GetEmail(msg.Id)))
-		linklist = append(linklist, link)
+		tz, err := time.LoadLocation(config.TimeZone)
+		if err != nil {
+			panic(err)
+		}
+		dateUnix := time.Unix(msg.InternalDate, 0).In(tz)
+		date := dateUnix.Format("20060102")
+		obj := linkListObject{Link: link, Date: date}
+
+		linklist = append(linklist, obj)
 	}
 
-	destination := config.SaveLoc
 	for _, val := range linklist {
-		fileByte := getFile(val)
+		fileByte, receiptNum := getFile(val.Link)
 		// generate a unique name using the url.
 		// the url includes .pdf as well so remove that to begin with
 		// the future will look something like
-		// Sprintf("%s%s", dateFromEmail, ".pdf")
-		fileName := fmt.Sprintf("%s%s", val[len(val)-10:len(val)-4], ".pdf")
-		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", destination, fileName), fileByte, 0644)
+		// Sprintf()
+		fileName := fmt.Sprintf("%s %s %s%s", val.Date, config.ShortDescription, receiptNum, ".pdf")
+		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", config.SaveLoc, fileName), fileByte, 0644)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -96,12 +114,11 @@ func getLink(body string) (link string, err error) {
 }
 
 // thank you postman(getpostman.com)
-func getFile(url string) []byte {
+func getFile(url string) ([]byte, string) {
 	req, _ := http.NewRequest("GET", url, nil)
 
 	req.Header.Add("cache-control", "no-cache")
 
-	// filename is in here
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Println("getFile:", err)
@@ -109,5 +126,14 @@ func getFile(url string) []byte {
 
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
-	return body
+
+	//get the receipt number from the filename
+	// Make a Regex to say we only want numbers
+	reg, err := regexp.Compile(`[^\d ]+`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	filename := res.Header["Content-Disposition"]
+	number := reg.ReplaceAllString(strings.Join(filename, " "), "")
+	return body, number
 }
