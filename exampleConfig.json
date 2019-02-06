@@ -1,5 +1,6 @@
 {
-    "Lable": "gmail's lable number",
+    "Label": "gmail's label number",
     "Subject": "email's Subject line",
-    "Sender": "Sender"
+    "Sender": "Sender",
+    "SaveLoc": "./downloads"
 }
