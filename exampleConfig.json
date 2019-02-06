@@ -2,5 +2,7 @@
     "Label": "gmail's label number",
     "Subject": "email's Subject line",
     "Sender": "Sender",
-    "SaveLoc": "./downloads"
+    "SaveLoc": "./downloads",
+    "ShortDescription": "Receipt number",
+    "Timezone": "Australia/Perth"
 }
