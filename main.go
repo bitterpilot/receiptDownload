@@ -36,15 +36,6 @@ func main() {
 		}
 	}
 	msg := gmail.GetEmail(config.Example.EmailID)
-	partNum := 0
-	for i := 0; i < len(msg.Payload.Parts); i++ {
-		if msg.Payload.Parts[i].MimeType == "text/html" {
-			partNum = i
-		}
-	}
-	data := msg.Payload.Parts[partNum].Body.Data
-	decode, _ := base64.URLEncoding.DecodeString(data)
-	fmt.Printf("%s", decode)
 }
 
 func loadConfiguration(file string) Config {

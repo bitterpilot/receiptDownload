@@ -100,6 +100,17 @@ func GetEmail(id string) *gmail.Message {
 }
 
 //func GetEmails(){}
+// GetEmailBody finds the payload that is html and returns it
+func GetEmailBody(msg *gmail.Message) string {
+	var partNum int
+	for i := 0; i < len(msg.Payload.Parts); i++ {
+		if msg.Payload.Parts[i].MimeType == "text/html" {
+			partNum = i
+		}
+	}
+	data := msg.Payload.Parts[partNum].Body.Data
+	return data
+}
 
 func ListEmails(labelID, query string) []*gmail.Message {
 	user := "me"
