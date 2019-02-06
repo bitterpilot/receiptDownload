@@ -69,11 +69,28 @@ func getLink(body string) (link string, err error) {
 		}
 	}
 	f(doc)
-	
+
 	for _, attr := range b.Attr {
 		if attr.Key == "href" {
 			return attr.Val, nil
 		}
 	}
 	return "", errors.New("no link found")
+}
+
+// thank you postman(getpostman.com)
+func getFile(url string) []byte {
+	req, _ := http.NewRequest("GET", url, nil)
+
+	req.Header.Add("cache-control", "no-cache")
+
+	// filename is in here
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println("getFile:", err)
+	}
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+	return body
 }
