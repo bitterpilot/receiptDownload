@@ -10,16 +10,11 @@ import (
 	"github.com/bitterpilot/receiptDownload/gmail"
 )
 
-type Config struct {
+type config struct {
 	Label   string `json:"Label"`
 	Subject string `json:"Subject"`
 	Sender  string `json:"Sender"`
 	SaveLoc string `json:"SaveLoc"`
-
-	//temporary example items
-	Example struct {
-		EmailID string `json:"emailID"`
-	} `json:"example"`
 }
 
 func main() {
@@ -38,8 +33,8 @@ func main() {
 	msg := gmail.GetEmail(config.Example.EmailID)
 }
 
-func loadConfiguration(file string) Config {
-	var config Config
+func loadConfiguration(file string) config {
+	var conf config
 	configFile, err := os.Open(file)
 	defer configFile.Close()
 	if err != nil {
@@ -47,10 +42,10 @@ func loadConfiguration(file string) Config {
 	}
 
 	jsonParser := json.NewDecoder(configFile)
-	if err := jsonParser.Decode(&config); err != nil {
+	if err := jsonParser.Decode(&conf); err != nil {
 		log.Fatalf("json error: %s", err)
 	}
-	return config
+	return conf
 }
 
 func getLink(body string) (link string, err error) {
