@@ -89,6 +89,7 @@ func getService() *gmail.Service {
 	return srv
 }
 
+// GetEmail get a single email
 func GetEmail(id string) *gmail.Message {
 	user := "me"
 	srv := getService()
@@ -99,7 +100,15 @@ func GetEmail(id string) *gmail.Message {
 	return msg
 }
 
-//func GetEmails(){}
+// GetEmails get meany emails with one request
+// this is a temporary solution until I can
+// check for a batch get option in the gmail api
+func GetEmails(IDs []string) {
+	for _, id := range IDs {
+		GetEmail(id)
+	}
+}
+
 // GetEmailBody finds the payload that is html and returns it
 func GetEmailBody(msg *gmail.Message) string {
 	var partNum int
@@ -112,6 +121,7 @@ func GetEmailBody(msg *gmail.Message) string {
 	return data
 }
 
+// ListEmails lists all emails matching a label and query
 func ListEmails(labelID, query string) []*gmail.Message {
 	user := "me"
 	srv := getService()
@@ -124,6 +134,7 @@ func ListEmails(labelID, query string) []*gmail.Message {
 	return r.Messages
 }
 
+// ListLables all lables and their ids
 func ListLables() {
 	user := "me"
 	srv := getService()
@@ -138,6 +149,6 @@ func ListLables() {
 	}
 	fmt.Println("Labels:")
 	for _, l := range r.Labels {
-		fmt.Printf("- %s\n", l.Name)
+		fmt.Printf("- %s\tID: %s\n", l.Name, l.Id)
 	}
 }
