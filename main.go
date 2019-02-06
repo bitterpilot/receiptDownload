@@ -1,11 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
+
+	"golang.org/x/net/html"
 
 	"github.com/bitterpilot/receiptDownload/gmail"
 )
@@ -22,15 +28,26 @@ func main() {
 	query := fmt.Sprintf("from:%s subject:%s", config.Sender, config.Subject)
 	list := gmail.ListEmails(config.Label, query)
 
-	if len(list) > 3 {
-		//GetEmails
-	} else {
-		for _, val := range list {
-			fmt.Println(val.Id)
-			//GetEmail
+	var linklist []string
+	for _, msg := range list {
+		//https://www.thepolyglotdeveloper.com/2017/05/concurrent-golang-applications-goroutines-channels/
+		link, _ := getLink(gmail.GetEmailBody(gmail.GetEmail(msg.Id)))
+		linklist = append(linklist, link)
+	}
+
+	destination := config.SaveLoc
+	for _, val := range linklist {
+		fileByte := getFile(val)
+		// generate a unique name using the url.
+		// the url includes .pdf as well so remove that to begin with
+		// the future will look something like
+		// Sprintf("%s%s", dateFromEmail, ".pdf")
+		fileName := fmt.Sprintf("%s%s", val[len(val)-10:len(val)-4], ".pdf")
+		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", destination, fileName), fileByte, 0644)
+		if err != nil {
+			fmt.Println(err)
 		}
 	}
-	msg := gmail.GetEmail(config.Example.EmailID)
 }
 
 func loadConfiguration(file string) config {
