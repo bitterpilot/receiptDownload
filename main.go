@@ -52,3 +52,33 @@ func loadConfiguration(file string) Config {
 	}
 	return config
 }
+
+func getLink(body string) (link string, err error) {
+	decode, err := base64.URLEncoding.DecodeString(body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	doc, err := html.Parse(bytes.NewReader(decode))
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var b *html.Node
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "a" {
+			b = n
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+	
+	for _, attr := range b.Attr {
+		if attr.Key == "href" {
+			return attr.Val, nil
+		}
+	}
+	return "", errors.New("no link found")
+}
