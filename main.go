@@ -42,15 +42,11 @@ func main() {
 
 	for _, msg := range list {
 		//https://www.thepolyglotdeveloper.com/2017/05/concurrent-golang-applications-goroutines-channels/
-		link, _ := getLink(gmail.GetEmailBody(gmail.GetEmail(msg.Id)))
-		tz, err := time.LoadLocation(config.TimeZone)
-		if err != nil {
-			panic(err)
-		}
-		dateUnix := time.Unix(msg.InternalDate, 0).In(tz)
-		date := dateUnix.Format("20060102")
-		obj := linkListObject{Link: link, Date: date}
+		email := gmail.GetEmail(msg.Id)
+		link, _ := getLink(gmail.GetEmailBody(email))
+		date := processInternalDate(email.InternalDate, config.TimeZone)
 
+		obj := linkListObject{Link: link, Date: date}
 		linklist = append(linklist, obj)
 	}
 
@@ -136,4 +132,13 @@ func getFile(url string) ([]byte, string) {
 	filename := res.Header["Content-Disposition"]
 	number := reg.ReplaceAllString(strings.Join(filename, " "), "")
 	return body, number
+}
+
+func processInternalDate(InternalDate int64, TimeZone string) string {
+	tz, err := time.LoadLocation(TimeZone)
+	if err != nil {
+		log.Panicln(err)
+	}
+	dateUnix := time.Unix(0, InternalDate*int64(time.Millisecond)).In(tz)
+	return dateUnix.Format("20060102")
 }
