@@ -35,7 +35,7 @@ type linkListObject struct {
 
 func main() {
 	config := loadConfiguration("config.json")
-	query := fmt.Sprintf("from:%s subject:%s", config.Sender, config.Subject)
+	query := fmt.Sprintf("from:%s subject:%s is:unread", config.Sender, config.Subject)
 	list := gmail.ListEmails(config.Label, query)
 
 	var linklist []linkListObject
