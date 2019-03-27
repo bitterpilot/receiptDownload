@@ -111,14 +111,18 @@ func GetEmails(IDs []string) {
 
 // GetEmailBody finds the payload that is html and returns it
 func GetEmailBody(msg *gmail.Message) string {
-	var partNum int
 	for i := 0; i < len(msg.Payload.Parts); i++ {
 		if msg.Payload.Parts[i].MimeType == "text/html" {
-			partNum = i
+			return msg.Payload.Parts[i].Body.Data
+		}
+
+		for j := 0; j < len(msg.Payload.Parts[i].Parts); j++ {
+			if msg.Payload.Parts[i].Parts[j].MimeType == "text/html" {
+				return msg.Payload.Parts[i].Parts[j].Body.Data
+			}
 		}
 	}
-	data := msg.Payload.Parts[partNum].Body.Data
-	return data
+	return ""
 }
 
 // ListEmails lists all emails matching a label and query
