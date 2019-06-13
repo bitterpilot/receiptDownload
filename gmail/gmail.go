@@ -1,3 +1,4 @@
+// Package gmail handels authentication and retrieval of emails from gmail
 package gmail
 
 import (
