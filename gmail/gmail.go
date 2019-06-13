@@ -109,7 +109,7 @@ func GetEmails(IDs []string) {
 	}
 }
 
-// GetEmailBody finds the payload that is html and returns it
+// GetEmailBody finds the payload that is html and returns it in it's original urlbase64 encoding
 func GetEmailBody(msg *gmail.Message) string {
 	for i := 0; i < len(msg.Payload.Parts); i++ {
 		if msg.Payload.Parts[i].MimeType == "text/html" {
