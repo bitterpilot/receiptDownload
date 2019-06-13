@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -14,9 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/html"
-
 	"github.com/bitterpilot/receiptDownload/gmail"
+	"github.com/bitterpilot/receiptDownload/link"
 )
 
 type config struct {
@@ -28,35 +26,47 @@ type config struct {
 	TimeZone         string `json:"TimeZone"`
 }
 
-type linkListObject struct {
-	Link string
+type pdfInfo struct {
 	Date string
+	link.Link
 }
 
 func main() {
 	config := loadConfiguration("config.json")
 	query := fmt.Sprintf("from:%s subject:%s is:unread", config.Sender, config.Subject)
+
+	var PDFList []pdfInfo
 	list := gmail.ListEmails(config.Label, query)
-
-	var linklist []linkListObject
-
 	for _, msg := range list {
-		//https://www.thepolyglotdeveloper.com/2017/05/concurrent-golang-applications-goroutines-channels/
-		email := gmail.GetEmail(msg.Id)
-		link, _ := getLink(gmail.GetEmailBody(email))
-		date := processInternalDate(email.InternalDate, config.TimeZone)
+		msg = gmail.GetEmail(msg.Id)
+		bodyDecoded, err := base64.URLEncoding.DecodeString(gmail.GetEmailBody(msg))
+		if err != nil {
+			log.Printf("Error decodong email: %v", err)
+		}
+		body := bytes.NewReader(bodyDecoded)
+		links, err := link.Parse(body)
+		if err != nil {
+			log.Printf("Error finding links: %v", err)
+		}
 
-		obj := linkListObject{Link: link, Date: date}
-		linklist = append(linklist, obj)
+		// check that the link is to a PDF
+		for _, link := range links {
+			if strings.Contains(link.Text, ".pdf") {
+				item := pdfInfo{
+					Date: processInternalDate(msg.InternalDate, config.TimeZone),
+					Link: link,
+				}
+				PDFList = append(PDFList, item)
+			}
+		}
 	}
 
-	for _, val := range linklist {
-		fileByte, receiptNum := getFile(val.Link)
-		// generate a unique name using the url.
-		// the url includes .pdf as well so remove that to begin with
-		// the future will look something like
-		// Sprintf()
-		fileName := fmt.Sprintf("%s %s %s%s", val.Date, config.ShortDescription, receiptNum, ".pdf")
+	// Write file
+	for _, val := range PDFList {
+		fileByte, receiptNum := getFile(val.Link.Href)
+		// HACK: filename should probally have a space between the 2nd and 3rd %s. the lack of
+		// 		 this space is a quick fick for the bug in the func getFile number variable
+		fileName := fmt.Sprintf("%s %s%s.pdf", val.Date, config.ShortDescription, receiptNum)
 		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", config.SaveLoc, fileName), fileByte, 0644)
 		if err != nil {
 			fmt.Println(err)
@@ -79,37 +89,7 @@ func loadConfiguration(file string) config {
 	return conf
 }
 
-func getLink(body string) (link string, err error) {
-	decode, err := base64.URLEncoding.DecodeString(body)
-	if err != nil {
-		fmt.Println(err)
-	}
-	doc, err := html.Parse(bytes.NewReader(decode))
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	var b *html.Node
-	var f func(*html.Node)
-	f = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "a" {
-			b = n
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			f(c)
-		}
-	}
-	f(doc)
-
-	for _, attr := range b.Attr {
-		if attr.Key == "href" {
-			return attr.Val, nil
-		}
-	}
-	return "", errors.New("no link found")
-}
-
-// thank you postman(getpostman.com)
+// code generated with postman(getpostman.com)
 func getFile(url string) ([]byte, string) {
 	req, _ := http.NewRequest("GET", url, nil)
 
@@ -130,6 +110,9 @@ func getFile(url string) ([]byte, string) {
 		log.Fatal(err)
 	}
 	filename := res.Header["Content-Disposition"]
+	// BUG: this leaves a space in the number, the result is a file name with a
+	// 		double space between ShortDescription and the number. When fixed
+	// 		remove the hack in the write file for block in func main.
 	number := reg.ReplaceAllString(strings.Join(filename, " "), "")
 	return body, number
 }
