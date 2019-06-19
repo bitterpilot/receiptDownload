@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bitterpilot/receiptDownload/gmail"
 	"github.com/bitterpilot/receiptDownload/link"
@@ -41,16 +42,18 @@ func main() {
 		msg = gmail.GetEmail(msg.Id)
 		bodyDecoded, err := base64.URLEncoding.DecodeString(gmail.GetEmailBody(msg))
 		if err != nil {
-			log.Printf("Error decodong email: %v", err)
+			log.WithField("err", err).Fatal("Error decoding email")
 		}
 		body := bytes.NewReader(bodyDecoded)
 		links, err := link.Parse(body)
 		if err != nil {
-			log.Printf("Error finding links: %v", err)
+			log.WithField("err", err).Fatal("Error finding links")
 		}
 
+		log.Println("Links found:")
 		// check that the link is to a PDF
 		for _, link := range links {
+			log.Printf("\t%s", link)
 			if strings.Contains(link.Text, ".pdf") {
 				item := pdfInfo{
 					Date: processInternalDate(msg.InternalDate, config.TimeZone),
@@ -63,13 +66,15 @@ func main() {
 
 	// Write file
 	for _, val := range PDFList {
+		log.Printf("Selected link: %s", val.Link.Href)
 		fileByte, receiptNum := getFile(val.Link.Href)
 		// HACK: filename should probally have a space between the 2nd and 3rd %s. the lack of
 		// 		 this space is a quick fix for the bug in the func getFile number variable
 		fileName := fmt.Sprintf("%s %s%s.pdf", val.Date, config.ShortDescription, receiptNum)
 		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", config.SaveLoc, fileName), fileByte, 0644)
+		log.Printf("File written: %s", fileName)
 		if err != nil {
-			fmt.Println(err)
+			log.WithField("err", err).Fatal("Error writing file")
 		}
 	}
 }
