@@ -1,4 +1,4 @@
-// Package link searches a html document for href's
+// Package link searches a html document for href
 // tutorial: Gophercises.com
 package link
 

@@ -68,3 +68,4 @@ Temporary Items
 config.json
 credentials.json
 token.json
+/.vscode

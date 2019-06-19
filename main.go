@@ -65,7 +65,7 @@ func main() {
 	for _, val := range PDFList {
 		fileByte, receiptNum := getFile(val.Link.Href)
 		// HACK: filename should probally have a space between the 2nd and 3rd %s. the lack of
-		// 		 this space is a quick fick for the bug in the func getFile number variable
+		// 		 this space is a quick fix for the bug in the func getFile number variable
 		fileName := fmt.Sprintf("%s %s%s.pdf", val.Date, config.ShortDescription, receiptNum)
 		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", config.SaveLoc, fileName), fileByte, 0644)
 		if err != nil {
